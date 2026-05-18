@@ -7,25 +7,22 @@ import {
   Client,
   CreateAccountStatus,
   CreateTransferStatus,
+  Transfer,
   TransferFlags,
   createClient,
   id as tbId,
 } from 'tigerbeetle-node';
 import { NotificationsClient } from '../notifications/notifications.client';
 
-const ESCROW_ID = 1n;
 const HOUSE_ID = 2n;
 
 const LEDGER = 1;
 
-const CODE_HOLD = 1;
-const CODE_RELEASE = 2;
+const CODE_BET = 1;
 const CODE_PAYOUT = 3;
-const CODE_KEEP = 4;
 const CODE_DEPOSIT = 5;
 const CODE_ADMIN_ADJUST = 6;
 
-const ESCROW_CODE = 100;
 const HOUSE_CODE = 101;
 const USER_CODE = 1;
 
@@ -62,9 +59,16 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   async createAccount(userId: string): Promise<void> {
     const results = await this.client.createAccounts([
-      this.buildAccount(this.toId(userId), USER_CODE),
+      this.buildAccount(this.toId(userId), USER_CODE, AccountFlags.debits_must_not_exceed_credits),
     ]);
     this.assertCreateAccounts(results);
+  }
+
+  async getBalanceCents(userId: string): Promise<number> {
+    const accounts = await this.client.lookupAccounts([this.toId(userId)]);
+    if (accounts.length === 0) return 0;
+    const a = accounts[0];
+    return Number(a.credits_posted - a.debits_posted - a.debits_pending);
   }
 
   async getBalance(userId: string): Promise<number> {
@@ -73,7 +77,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   }
 
   async deposit(userId: string, amountCents: number): Promise<void> {
-    await this.transfer(HOUSE_ID, this.toId(userId), amountCents, CODE_DEPOSIT);
+    await this.simpleTransfer(HOUSE_ID, this.toId(userId), amountCents, CODE_DEPOSIT);
     await this.pushBalanceUpdated(userId);
   }
 
@@ -81,45 +85,84 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     const currentCents = await this.getBalanceCents(userId);
     const diff = targetCents - currentCents;
     if (diff > 0) {
-      await this.transfer(HOUSE_ID, this.toId(userId), diff, CODE_ADMIN_ADJUST);
+      await this.simpleTransfer(HOUSE_ID, this.toId(userId), diff, CODE_ADMIN_ADJUST);
     } else if (diff < 0) {
-      await this.transfer(this.toId(userId), HOUSE_ID, -diff, CODE_ADMIN_ADJUST);
+      await this.simpleTransfer(this.toId(userId), HOUSE_ID, -diff, CODE_ADMIN_ADJUST);
     }
     await this.pushBalanceUpdated(userId);
   }
 
   async hold(userId: string, betId: string, amountCents: number): Promise<void> {
-    await this.transfer(this.toId(userId), ESCROW_ID, amountCents, CODE_HOLD, this.toId(betId));
+    await this.createTransfers([
+      {
+        id: this.toId(betId),
+        debit_account_id: this.toId(userId),
+        credit_account_id: HOUSE_ID,
+        amount: BigInt(amountCents),
+        pending_id: 0n,
+        user_data_128: this.toId(betId),
+        user_data_64: 0n,
+        user_data_32: 0,
+        timeout: 0,
+        ledger: LEDGER,
+        code: CODE_BET,
+        flags: TransferFlags.pending,
+        timestamp: 0n,
+      },
+    ]);
     await this.pushBalanceUpdated(userId);
   }
 
   async release(userId: string, betId: string, amountCents: number): Promise<void> {
-    await this.transfer(ESCROW_ID, this.toId(userId), amountCents, CODE_RELEASE, this.toId(betId));
+    await this.createTransfers([
+      {
+        id: tbId(),
+        debit_account_id: this.toId(userId),
+        credit_account_id: HOUSE_ID,
+        amount: BigInt(amountCents),
+        pending_id: this.toId(betId),
+        user_data_128: this.toId(betId),
+        user_data_64: 0n,
+        user_data_32: 0,
+        timeout: 0,
+        ledger: LEDGER,
+        code: CODE_BET,
+        flags: TransferFlags.void_pending_transfer,
+        timestamp: 0n,
+      },
+    ]);
+    await this.pushBalanceUpdated(userId);
+  }
+
+  async keep(userId: string, betId: string, amountCents: number): Promise<void> {
+    await this.createTransfers([
+      {
+        id: tbId(),
+        debit_account_id: this.toId(userId),
+        credit_account_id: HOUSE_ID,
+        amount: BigInt(amountCents),
+        pending_id: this.toId(betId),
+        user_data_128: this.toId(betId),
+        user_data_64: 0n,
+        user_data_32: 0,
+        timeout: 0,
+        ledger: LEDGER,
+        code: CODE_BET,
+        flags: TransferFlags.post_pending_transfer,
+        timestamp: 0n,
+      },
+    ]);
     await this.pushBalanceUpdated(userId);
   }
 
   async payout(userId: string, betId: string, amountCents: number): Promise<void> {
-    await this.transfer(HOUSE_ID, this.toId(userId), amountCents, CODE_PAYOUT, this.toId(betId));
+    await this.simpleTransfer(HOUSE_ID, this.toId(userId), amountCents, CODE_PAYOUT, this.toId(betId));
     await this.pushBalanceUpdated(userId);
   }
 
-  async keep(betId: string, amountCents: number): Promise<void> {
-    await this.transfer(ESCROW_ID, HOUSE_ID, amountCents, CODE_KEEP, this.toId(betId));
-  }
-
   private async ensureSystemAccounts(): Promise<void> {
-    const results = await this.client.createAccounts([
-      this.buildAccount(ESCROW_ID, ESCROW_CODE),
-      this.buildAccount(HOUSE_ID, HOUSE_CODE),
-    ]);
+    const results = await this.client.createAccounts([this.buildAccount(HOUSE_ID, HOUSE_CODE)]);
     this.assertCreateAccounts(results);
-  }
-
-  private async getBalanceCents(userId: string): Promise<number> {
-    const accounts = await this.client.lookupAccounts([this.toId(userId)]);
-    if (accounts.length === 0) return 0;
-    const a = accounts[0];
-    return Number(a.credits_posted - a.debits_posted);
   }
 
   private async pushBalanceUpdated(userId: string): Promise<void> {
@@ -127,7 +170,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     await this.notifications.toUser(userId, 'balance.updated', { balance });
   }
 
-  private buildAccount(id: bigint, code: number) {
+  private buildAccount(id: bigint, code: number, flags: number = AccountFlags.none) {
     return {
       id,
       debits_pending: 0n,
@@ -140,19 +183,19 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
       reserved: 0,
       ledger: LEDGER,
       code,
-      flags: AccountFlags.none,
+      flags,
       timestamp: 0n,
     };
   }
 
-  private async transfer(
+  private async simpleTransfer(
     debitId: bigint,
     creditId: bigint,
     amountCents: number,
     code: number,
     betId: bigint = 0n,
   ): Promise<void> {
-    const results = await this.client.createTransfers([
+    await this.createTransfers([
       {
         id: tbId(),
         debit_account_id: debitId,
@@ -169,6 +212,10 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
         timestamp: 0n,
       },
     ]);
+  }
+
+  private async createTransfers(transfers: Transfer[]): Promise<void> {
+    const results = await this.client.createTransfers(transfers);
     for (const r of results) {
       if (r.status !== CreateTransferStatus.created) {
         throw new Error(`TigerBeetle transfer failed: ${CreateTransferStatus[r.status]}`);

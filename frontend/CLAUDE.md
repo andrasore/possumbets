@@ -4,12 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+This repo uses **pnpm**, not npm — never run `npm` commands.
+
 ```bash
-npm run dev          # Development server on port 3000
-npm run start        # Serve production build on port 3000
+pnpm dev            # Development server on port 3000
+pnpm start          # Serve production build on port 3000
 ```
 
-For typechecks and builds, always run `npm run build` / `npm run typecheck`
+For typechecks and builds, always run `pnpm build` / `pnpm typecheck`
 from the **repo root**, not from this workspace. See the root `CLAUDE.md`.
 
 There is no test or lint script configured.

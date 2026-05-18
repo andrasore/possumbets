@@ -83,7 +83,8 @@ export async function startTigerBeetle(): Promise<TbInstance> {
   const port = await pickFreePort();
   const dataDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'tb_test_'));
   const dataFile = path.join(dataDir, '0_0.tigerbeetle');
-
+  //TODO ensure the empty data dir here instead of removing at the end of test
+  
   execFileSync(
     TB_BIN,
     ['format', '--cluster=0', '--replica=0', '--replica-count=1', dataFile],

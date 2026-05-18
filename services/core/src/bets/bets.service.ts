@@ -32,6 +32,10 @@ export class BetsService {
     return { ...bet, status: 'held' };
   }
 
+  // TODO: resolve the pending hold from `place()` — on win call `wallet.keep(userId, betId, stakeCents)`
+  // before `payout`, on loss call `wallet.keep(userId, betId, stakeCents)`. Without this the user's
+  // stake stays reserved on `debits_pending` forever, preventing further bets up to that amount.
+  // Deferred until sports-event resolution exists to trigger real settlements.
   async settle(betId: string, won: boolean, payout: number): Promise<void> {
     await this.repo.update(betId, {
       status: won ? 'won' : 'lost',

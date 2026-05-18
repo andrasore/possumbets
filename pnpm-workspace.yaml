@@ -3,8 +3,11 @@ packages:
   - "services/*"
 allowBuilds:
   '@nestjs/core': true
+  cpu-features: true
   esbuild: true
   msw: true
+  protobufjs: true
   sharp: true
+  ssh2: true
   unrs-resolver: true
 injectWorkspacePackages: true

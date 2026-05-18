@@ -1,9 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "init": {
+      "inputs": ["package.json", "pyproject.toml"],
+      "outputs": ["node_modules/**", ".venv/**"]
+    },
     "build": {
+      "dependsOn": ["init"],
       "inputs": ["src/**"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".next/**"]
     },
     "proto:gen": {
       "inputs": ["../../proto/**/*.proto"],
@@ -20,8 +25,15 @@
       ],
       "outputs": []
     },
-    "init": {
-      "cache": false
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "src/**",
+        "test/**",
+        "jest.config.js",
+        "tsconfig.json"
+      ],
+      "outputs": []
     }
   }
 }

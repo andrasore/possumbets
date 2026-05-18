@@ -13,7 +13,8 @@ import { useForceTheme } from '@/hooks/useForceTheme';
 import { isAdmin } from '@/lib/keycloak';
 import type { Bet, OddsEvent } from '@/types';
 
-type Selection = { event: OddsEvent; choice: 'home' | 'away' | 'draw' } | null;
+type Choice = 'home' | 'away' | 'draw';
+type Selection = { event: OddsEvent; choice: Choice } | null;
 
 const statusPalette: Record<Bet['status'], string> = {
   won: 'green',
@@ -48,7 +49,12 @@ export default function DashboardPage() {
           <Heading as="h2" size="md" mb={4}>Live Markets</Heading>
           <OddsBoard
             events={odds}
-            onSelect={(event, choice) => setSelection({ event, choice })}
+            selectedEventId={selection?.event.eventId ?? null}
+            onToggle={(event) =>
+              setSelection((s) =>
+                s?.event.eventId === event.eventId ? null : { event, choice: 'home' },
+              )
+            }
           />
 
           {bets && bets.length > 0 && (
@@ -77,9 +83,12 @@ export default function DashboardPage() {
           )}
         </Box>
 
-        <Box as="aside" w="320px" borderLeftWidth="1px" borderColor="border" p={4} overflowY="auto">
+        <Box as="aside" w="600px" borderLeftWidth="1px" borderColor="border" p={4} overflowY="auto">
           <BetSlip
             selection={selection}
+            onChoiceChange={(choice) =>
+              setSelection((s) => (s ? { ...s, choice } : s))
+            }
             onPlaced={() => { setSelection(null); mutate(); }}
           />
         </Box>

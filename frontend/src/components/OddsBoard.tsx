@@ -1,14 +1,15 @@
 'use client';
 
-import { Badge, Box, Button, Card, Grid, Stack, Text } from '@chakra-ui/react';
+import { Badge, Card, Grid, Stack, Text } from '@chakra-ui/react';
 import type { OddsEvent } from '@/types';
 
 interface Props {
   events: OddsEvent[];
-  onSelect: (event: OddsEvent, selection: 'home' | 'away' | 'draw') => void;
+  selectedEventId: string | null;
+  onToggle: (event: OddsEvent) => void;
 }
 
-export function OddsBoard({ events, onSelect }: Props) {
+export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
   if (events.length === 0) {
     return (
       <Card.Root variant="outline">
@@ -22,53 +23,40 @@ export function OddsBoard({ events, onSelect }: Props) {
   }
 
   return (
-    <Stack gap={3}>
-      {events.map((e) => (
-        <Card.Root key={e.eventId}>
-          <Card.Body>
-            <Badge mb={3} textTransform="uppercase" letterSpacing="wide" fontSize="2xs">
-              {e.sport}
-            </Badge>
-            <Grid templateColumns="repeat(3, 1fr)" gap={2}>
-              <OddsButton label={e.homeTeam} odds={e.homeOdds} onClick={() => onSelect(e, 'home')} />
-              {e.drawOdds > 0 ? (
-                <OddsButton label="Draw" odds={e.drawOdds} onClick={() => onSelect(e, 'draw')} />
-              ) : (
-                <Box />
-              )}
-              <OddsButton label={e.awayTeam} odds={e.awayOdds} onClick={() => onSelect(e, 'away')} />
-            </Grid>
-          </Card.Body>
-        </Card.Root>
-      ))}
-    </Stack>
-  );
-}
-
-function OddsButton({ label, odds, onClick }: { label: string; odds: number; onClick: () => void }) {
-  return (
-    <Button
-      variant="outline"
-      onClick={onClick}
-      h="auto"
-      py={2}
-      px={3}
-      flexDirection="column"
-      gap={0.5}
+    <Grid
+      templateColumns={{
+        base: '1fr',
+        sm: 'repeat(2, 1fr)',
+        md: 'repeat(3, 1fr)',
+        lg: 'repeat(4, 1fr)',
+      }}
+      gap={3}
     >
-      <Text
-        fontSize="xs"
-        fontWeight="medium"
-        maxW="full"
-        whiteSpace="nowrap"
-        overflow="hidden"
-        textOverflow="ellipsis"
-      >
-        {label}
-      </Text>
-      <Text fontSize="md" fontWeight="bold">
-        {odds.toFixed(2)}
-      </Text>
-    </Button>
+      {events.map((e) => {
+        const selected = e.eventId === selectedEventId;
+        return (
+          <Card.Root
+            key={e.eventId}
+            cursor="pointer"
+            onClick={() => onToggle(e)}
+            borderColor={selected ? 'blue.500' : undefined}
+            bg={selected ? 'bg.subtle' : undefined}
+            _hover={{ borderColor: selected ? 'blue.500' : 'border.emphasized' }}
+            transition="border-color 0.15s, background-color 0.15s"
+          >
+            <Card.Body>
+              <Badge mb={3} textTransform="uppercase" letterSpacing="wide" fontSize="2xs">
+                {e.sport}
+              </Badge>
+              <Stack gap={1}>
+                <Text fontSize="sm" fontWeight="medium">{e.homeTeam}</Text>
+                <Text fontSize="xs" color="fg.muted">vs</Text>
+                <Text fontSize="sm" fontWeight="medium">{e.awayTeam}</Text>
+              </Stack>
+            </Card.Body>
+          </Card.Root>
+        );
+      })}
+    </Grid>
   );
 }

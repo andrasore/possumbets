@@ -8,6 +8,7 @@ import {
   Field,
   Flex,
   NumberInput,
+  SegmentGroup,
   Separator,
   Stack,
   Text,
@@ -15,17 +16,20 @@ import {
 import type { OddsEvent } from '@/types';
 import { placeBet } from '@/lib/api';
 
+type Choice = 'home' | 'away' | 'draw';
+
 interface Selection {
   event: OddsEvent;
-  choice: 'home' | 'away' | 'draw';
+  choice: Choice;
 }
 
 interface Props {
   selection: Selection | null;
+  onChoiceChange: (choice: Choice) => void;
   onPlaced: () => void;
 }
 
-export function BetSlip({ selection, onPlaced }: Props) {
+export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
   const [stake, setStake] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +39,7 @@ export function BetSlip({ selection, onPlaced }: Props) {
       <Card.Root variant="outline">
         <Card.Body>
           <Text fontSize="sm" color="fg.muted" textAlign="center">
-            Click any odds to build your bet slip.
+            Click any event to build your bet slip.
           </Text>
         </Card.Body>
       </Card.Root>
@@ -46,6 +50,14 @@ export function BetSlip({ selection, onPlaced }: Props) {
   const odds =
     choice === 'home' ? event.homeOdds : choice === 'away' ? event.awayOdds : event.drawOdds;
   const potentialReturn = stake ? (parseFloat(stake) * odds).toFixed(2) : '—';
+
+  const segments: { value: Choice; label: string; odds: number }[] = [
+    { value: 'home', label: event.homeTeam, odds: event.homeOdds },
+    ...(event.drawOdds > 0
+      ? [{ value: 'draw' as Choice, label: 'Draw', odds: event.drawOdds }]
+      : []),
+    { value: 'away', label: event.awayTeam, odds: event.awayOdds },
+  ];
 
   async function submit() {
     if (!stake || isNaN(Number(stake))) return;
@@ -82,6 +94,30 @@ export function BetSlip({ selection, onPlaced }: Props) {
               {choice} @ {odds.toFixed(2)}
             </Text>
           </Box>
+          <SegmentGroup.Root
+            size="sm"
+            width="full"
+            value={choice}
+            onValueChange={(d) => {
+              if (d.value) onChoiceChange(d.value as Choice);
+            }}
+          >
+            <SegmentGroup.Indicator />
+            <SegmentGroup.Items
+              items={segments.map((s) => ({
+                value: s.value,
+                label: (
+                  <Stack gap={0.5} align="center">
+                    <Text fontSize="sm" fontWeight="medium">{s.label}</Text>
+                    <Text fontSize="xs" fontWeight="bold">{s.odds.toFixed(2)}</Text>
+                  </Stack>
+                ),
+              }))}
+              flex="1"
+              height="16"
+              justifyContent="center"
+            />
+          </SegmentGroup.Root>
           <Field.Root>
             <Field.Label>Stake (£)</Field.Label>
             <NumberInput.Root

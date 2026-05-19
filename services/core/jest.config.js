@@ -5,6 +5,7 @@ module.exports = {
   testRegex: '.*\\.spec\\.ts$',
   testEnvironment: 'node',
   testTimeout: 60_000,
+  globalSetup: '<rootDir>/wallet/tigerbeetle-global-setup.ts',
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },

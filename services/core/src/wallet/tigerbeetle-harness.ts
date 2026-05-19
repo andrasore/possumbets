@@ -16,10 +16,10 @@ const ARCH_MAP: Record<string, string> = {
 const ARCH = ARCH_MAP[process.arch] ?? 'x86_64';
 const TB_DOWNLOAD_URL = `https://github.com/tigerbeetle/tigerbeetle/releases/download/${TB_VERSION}/tigerbeetle-${ARCH}-linux.zip`;
 
-const TB_BIN_DIR = path.join(__dirname, '.tb_bin');
+const TB_BIN_DIR = path.join(os.tmpdir(), 'tb_bin');
 const TB_BIN = path.join(TB_BIN_DIR, 'tigerbeetle');
 
-async function ensureBinary(): Promise<void> {
+export async function ensureBinary(): Promise<void> {
   if (fs.existsSync(TB_BIN)) return;
   await fsp.mkdir(TB_BIN_DIR, { recursive: true });
   const zipPath = path.join(TB_BIN_DIR, 'tb.zip');

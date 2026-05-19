@@ -17,14 +17,18 @@ services:
       timeout: 5s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: betting
+      RABBITMQ_DEFAULT_PASS: betting_dev
     ports:
-      - "6379:6379"
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
-      timeout: 5s
+      timeout: 10s
       retries: 10
 
   tigerbeetle:
@@ -91,7 +95,7 @@ services:
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
-      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       TIGERBEETLE_ADDRESS: tigerbeetle:6000
       TIGERBEETLE_CLUSTER_ID: "0"
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
@@ -106,7 +110,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      rabbitmq:
         condition: service_healthy
       tigerbeetle:
         condition: service_healthy
@@ -118,13 +122,13 @@ services:
       context: .
       target: odds
     environment:
-      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
       ODDS_PROVIDER: mock
       ODDS_STORAGE: postgres
       POLL_INTERVAL_SECONDS: 30
     depends_on:
-      redis:
+      rabbitmq:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -134,12 +138,12 @@ services:
       context: .
       target: notifications
     environment:
-      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
       KEYCLOAK_REALM: betting
     depends_on:
-      redis:
+      rabbitmq:
         condition: service_healthy
       keycloak:
         condition: service_started

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { RedisModule } from '../redis/redis.module';
+import { MessagingModule } from '../messaging/messaging.module';
 import { NotificationsClient } from './notifications.client';
 
 @Module({
-  imports: [RedisModule],
+  imports: [MessagingModule],
   providers: [NotificationsClient],
   exports: [NotificationsClient],
 })

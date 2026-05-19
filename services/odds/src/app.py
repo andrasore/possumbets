@@ -13,7 +13,7 @@ from storage import get_storage
 
 logging.basicConfig(level=logging.INFO)
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
+RABBITMQ_URL = os.environ.get("RABBITMQ_URL", "amqp://localhost:5672")
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
 PROVIDER_NAME = os.environ.get("ODDS_PROVIDER", "mock")
 STORAGE_NAME = os.environ.get("ODDS_STORAGE", "postgres")
@@ -23,7 +23,7 @@ STORAGE_NAME = os.environ.get("ODDS_STORAGE", "postgres")
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     provider = get_provider(PROVIDER_NAME)
     storage = get_storage(STORAGE_NAME)
-    publisher = OddsPublisher(REDIS_URL)
+    publisher = OddsPublisher(RABBITMQ_URL)
     worker = asyncio.create_task(
         run(provider, storage, publisher, POLL_INTERVAL_SECONDS),
         name=f"odds-worker-{PROVIDER_NAME}-{STORAGE_NAME}",

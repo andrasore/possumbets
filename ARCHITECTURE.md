@@ -6,7 +6,8 @@ This is a distributed sports betting application built for demonstration
 purposes. It uses a polyglot service architecture — NestJS for the real-time
 core, FastAPI for the odds ingestion service, Flask + Flask-SocketIO for the
 notifications service, and Next.js for the frontend. Services communicate
-asynchronously via Redis pub/sub using protobuf-serialised messages.
+asynchronously via RabbitMQ fanout exchanges using protobuf-serialised
+messages.
 
 ---
 
@@ -20,11 +21,10 @@ asynchronously via Redis pub/sub using protobuf-serialised messages.
 | Odds Service     | FastAPI (Python, asyncio)                       |
 | Notifications    | Flask + Flask-SocketIO (Python, eventlet)       |
 | Identity         | Keycloak (OIDC, realm `betting`)                |
-| Messaging        | Redis pub/sub                                   |
+| Messaging        | RabbitMQ (fanout exchanges)                     |
 | Message format   | Protocol Buffers (protobuf)                     |
 | Primary DB       | PostgreSQL                                      |
 | Financial ledger | TigerBeetle                                     |
-| Cache            | Redis                                           |
 | External data    | The Odds API / SportsDB (free tier)             |
 
 ---
@@ -55,22 +55,22 @@ user-info lookups). Keycloak ships with its own dedicated Postgres instance.
 The primary application service. Responsibilities:
 - Bet placement and settlement logic
 - Wallet / ledger operations against TigerBeetle (in-process module)
-- Subscribes to the odds Redis channel and re-publishes UI events to the
-  notifications channel
+- Subscribes to the `odds.updated` exchange and re-publishes UI events to the
+  `notifications` exchange
 - Publishes UI events (balance updates, bet status changes, broadcast odds)
-  to Redis for the notifications service to deliver
+  to the `notifications` exchange for the notifications service to deliver
 
 Internally the wallet logic lives as a Nest module within the core service and
-is invoked by the bets module via direct method calls — no Redis hop for
+is invoked by the bets module via direct method calls — no broker hop for
 money movement.
 
 ### Flask + Flask-SocketIO — Notifications Service
 The only service the browser holds an open socket to. Responsibilities:
 - Accepts socket.io connections, verifies the JWT on `connect`, and joins each
   socket into a room named after its `sub` claim
-- Subscribes to the Redis `notifications` channel; for each `NotificationEvent`
-  it emits the carried JSON payload to the target user's room (or broadcasts
-  if `user_id` is empty)
+- Binds an exclusive auto-delete queue to the `notifications` fanout exchange;
+  for each `NotificationEvent` it emits the carried JSON payload to the target
+  user's room (or broadcasts if `user_id` is empty)
 
 The service is stateless — no DB, no business logic — and exists purely so the
 frontend has a fan-out point that doesn't depend on Core staying up to keep
@@ -82,8 +82,8 @@ provider. Responsibilities:
 - Runs an `asyncio` polling loop (using `aiohttp`) against the external sports
   data API
 - Normalises the incoming odds payload into a consistent internal schema
-- Writes current odds to Redis for low-latency reads by other services
-- Publishes `odds.updated` events to the Redis pub/sub channel
+- Persists current odds to Postgres
+- Publishes `OddsUpdatedEvent` messages to the `odds.updated` fanout exchange
 
 > **Note:** This service does not calculate odds. It is purely an ingestion and
 > normalisation layer over an external feed.
@@ -92,17 +92,22 @@ provider. Responsibilities:
 
 ## Inter-service Communication
 
-Cross-process traffic flows over Redis pub/sub with **Protocol Buffer**
-payloads — `.proto` schema files serve as the contract. The wallet logic is
-colocated inside Core as a Nest module; bets call the wallet via direct
-in-process method calls.
+Cross-process traffic flows over RabbitMQ fanout exchanges with **Protocol
+Buffer** payloads — `.proto` schema files serve as the contract. The wallet
+logic is colocated inside Core as a Nest module; bets call the wallet via
+direct in-process method calls.
 
 The frontend talks to Core over HTTP and to Notifications over a socket.io
 connection (both through the Nginx proxy).
 
-### Channels and event types
+Each exchange is a `fanout` type. Subscribers declare their own anonymous
+exclusive auto-delete queue and bind it to the exchange — semantically
+equivalent to publish/subscribe: every running subscriber gets a copy, and
+messages sent while no subscriber is connected are dropped.
 
-| Channel         | Publisher    | Subscribers   | Payload             |
+### Exchanges and event types
+
+| Exchange        | Publisher    | Subscribers   | Payload             |
 |-----------------|--------------|---------------|---------------------|
 | `odds.updated`  | Odds Service | Core API      | `OddsUpdatedEvent`  |
 | `notifications` | Core API     | Notifications | `NotificationEvent` |
@@ -126,7 +131,7 @@ Owned exclusively by the Core API service. Stores:
   email and name are fetched on demand from Keycloak)
 - Bet history and state
 - Sports events and market definitions
-- Sessions (or delegate to Redis)
+- Current odds (written by the Odds service, read by Core)
 
 Keycloak runs against its own separate Postgres instance.
 
@@ -136,12 +141,10 @@ Owned exclusively by Core's wallet module. Stores:
 - Every debit and credit as an immutable double-entry transfer
 - Provides strong consistency and crash-safety guarantees for financial data
 
-### Redis
-Shared infrastructure, used for three distinct purposes:
-1. **Pub/sub broker** — inter-service event bus (see above)
-2. **Odds cache** — current odds written by the Odds Service, read directly by
-   the Core API and served to the frontend
-3. **Session store** — short-lived user session tokens
+### RabbitMQ
+Shared infrastructure, used as the inter-service event bus (see
+"Inter-service Communication" above). The management UI is exposed on
+`localhost:15672` in dev (user `betting`, password `betting_dev`).
 
 ---
 
@@ -156,7 +159,7 @@ Shared infrastructure, used for three distinct purposes:
 ## Deployment
 
 Each service is intended to run as an independent Docker container. A
-`docker-compose.yml` at the repo root should wire up all services, Redis,
+`docker-compose.yml` at the repo root should wire up all services, RabbitMQ,
 PostgreSQL, and TigerBeetle for local development.
 
 Suggested repo structure:

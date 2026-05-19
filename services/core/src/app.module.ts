@@ -7,7 +7,7 @@ import { UsersModule } from './users/users.module';
 import { BetsModule } from './bets/bets.module';
 import { WalletModule } from './wallet/wallet.module';
 import { OddsModule } from './odds/odds.module';
-import { RedisModule } from './redis/redis.module';
+import { MessagingModule } from './messaging/messaging.module';
 import { AdminModule } from './admin/admin.module';
 import { User } from './users/user.entity';
 import { Bet } from './bets/bet.entity';
@@ -26,7 +26,7 @@ import { LoggingMiddleware } from './common/logging.middleware';
         synchronize: true, // use migrations in production
       }),
     }),
-    RedisModule,
+    MessagingModule,
     KeycloakModule,
     UsersModule,
     KeycloakAuthModule,

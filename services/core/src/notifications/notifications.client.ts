@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationEvent } from '../generated/events';
-import { RedisService } from '../redis/redis.service';
+import { MessagingService } from '../messaging/messaging.service';
 
 const CHANNEL = 'notifications';
 
 @Injectable()
 export class NotificationsClient {
-  constructor(private readonly redis: RedisService) {}
+  constructor(private readonly messaging: MessagingService) {}
 
   toUser(userId: string, event: string, data: unknown): Promise<void> {
     return this.publish(userId, event, data);
@@ -22,6 +22,6 @@ export class NotificationsClient {
       event,
       payload: JSON.stringify(data),
     });
-    await this.redis.publish(CHANNEL, Buffer.from(NotificationEvent.toBinary(msg)));
+    await this.messaging.publish(CHANNEL, Buffer.from(NotificationEvent.toBinary(msg)));
   }
 }

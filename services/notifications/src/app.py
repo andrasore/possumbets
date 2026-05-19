@@ -13,7 +13,7 @@ from subscriber import run as run_subscriber
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
+RABBITMQ_URL = os.environ.get("RABBITMQ_URL", "amqp://localhost:5672")
 KEYCLOAK_INTERNAL_URL = os.environ.get("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080")
 KEYCLOAK_REALM = os.environ.get("KEYCLOAK_REALM", "betting")
 KEYCLOAK_ISSUER_URL = os.environ.get(
@@ -28,7 +28,7 @@ sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")  # pyrig
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    subscriber = asyncio.create_task(run_subscriber(REDIS_URL, sio), name="notifications-subscriber")
+    subscriber = asyncio.create_task(run_subscriber(RABBITMQ_URL, sio), name="notifications-subscriber")
     try:
         yield
     finally:

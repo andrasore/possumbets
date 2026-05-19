@@ -1,0 +1,15 @@
+{
+  "name": "@betting/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "init": "playwright install chromium",
+    "e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,6 +1,7 @@
 packages:
   - "frontend"
   - "services/*"
+  - "e2e"
 allowBuilds:
   '@nestjs/core': true
   cpu-features: true

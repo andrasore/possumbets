@@ -27,7 +27,7 @@ export function Navbar({ balance }: NavbarProps) {
       </Link>
       <Flex align="center" gap={4}>
         {balance != null && (
-          <Text fontSize="sm" fontWeight="medium">
+          <Text fontSize="sm" fontWeight="medium" data-testid="balance">
             Balance: £{balance.toFixed(2)}
           </Text>
         )}

@@ -1,8 +1,14 @@
-const KEYCLOAK_URL = process.env.NEXT_PUBLIC_KEYCLOAK_URL ?? 'http://localhost:8090';
-const REALM = process.env.NEXT_PUBLIC_KEYCLOAK_REALM ?? 'betting';
-const CLIENT_ID = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? 'betting-frontend';
+import { getConfig } from '@/lib/config';
 
-const REALM_BASE = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect`;
+function realmBase(): string {
+  const { keycloakUrl, keycloakRealm } = getConfig();
+  return `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect`;
+}
+
+function clientId(): string {
+  return getConfig().keycloakClientId;
+}
+
 const REDIRECT_URI = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '';
 
 const TOKEN_KEY = 'token';
@@ -37,7 +43,7 @@ export async function startLogin(): Promise<void> {
   sessionStorage.setItem(PKCE_STATE_KEY, state);
 
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: clientId(),
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
     scope: 'openid profile email',
@@ -46,7 +52,7 @@ export async function startLogin(): Promise<void> {
     code_challenge_method: 'S256',
   });
 
-  window.location.assign(`${REALM_BASE}/auth?${params.toString()}`);
+  window.location.assign(`${realmBase()}/auth?${params.toString()}`);
 }
 
 export async function completeLogin(code: string, state: string): Promise<void> {
@@ -57,13 +63,13 @@ export async function completeLogin(code: string, state: string): Promise<void> 
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
-    client_id: CLIENT_ID,
+    client_id: clientId(),
     code,
     redirect_uri: REDIRECT_URI,
     code_verifier: verifier,
   });
 
-  const res = await fetch(`${REALM_BASE}/token`, {
+  const res = await fetch(`${realmBase()}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
@@ -81,12 +87,12 @@ async function doRefresh(): Promise<string> {
   const refresh = localStorage.getItem(REFRESH_KEY);
   if (!refresh) throw new Error('No refresh token');
 
-  const res = await fetch(`${REALM_BASE}/token`, {
+  const res = await fetch(`${realmBase()}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: CLIENT_ID,
+      client_id: clientId(),
       refresh_token: refresh,
     }),
   });
@@ -135,16 +141,16 @@ export function logout(): void {
   localStorage.removeItem(REFRESH_KEY);
 
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: clientId(),
     post_logout_redirect_uri: `${window.location.origin}/login`,
   });
   if (refresh) {
-    fetch(`${REALM_BASE}/logout`, {
+    fetch(`${realmBase()}/logout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, refresh_token: refresh }),
+      body: new URLSearchParams({ client_id: clientId(), refresh_token: refresh }),
       keepalive: true,
     }).catch(() => undefined);
   }
-  window.location.assign(`${REALM_BASE}/logout?${params.toString()}`);
+  window.location.assign(`${realmBase()}/logout?${params.toString()}`);
 }

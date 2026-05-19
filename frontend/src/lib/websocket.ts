@@ -2,12 +2,13 @@
 
 import { io, Socket } from 'socket.io-client';
 import { logout, refreshAccessToken } from '@/lib/keycloak';
+import { getConfig } from '@/lib/config';
 
 let socket: Socket | null = null;
 
 function resolveWsUrl(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${window.location.hostname}:8080`;
+  return `${proto}//${window.location.hostname}:${getConfig().gatewayPort}`;
 }
 
 export function getSocket(): Socket {

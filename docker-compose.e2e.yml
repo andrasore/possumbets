@@ -1,0 +1,42 @@
+# Override applied on top of docker-compose.yml for the e2e stack.
+# Use with: docker compose -p betting-e2e -f docker-compose.yml -f docker-compose.e2e.yml ...
+#
+# - Internal services lose their host port mappings (they only talk to each
+#   other inside the e2e docker network) — `!reset` clears the base list
+#   since compose otherwise concatenates port lists on merge.
+# - User-facing services are shifted to non-conflicting ports so the dev stack
+#   on standard ports can keep running.
+# - Keycloak uses a dedicated realm.e2e.json with shifted redirect URIs.
+
+services:
+  postgres:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  tigerbeetle:
+    ports: !reset []
+  keycloak_postgres:
+    ports: !reset []
+  core:
+    environment:
+      KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting
+    ports: !reset []
+  notifications:
+    environment:
+      KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting
+  keycloak:
+    environment:
+      KC_HOSTNAME: http://localhost:18090
+    volumes: !override
+      - ./keycloak/realm.e2e.json:/opt/keycloak/data/import/realm.json:ro
+    ports: !override
+      - "18090:8080"
+  nginx:
+    ports: !override
+      - "18080:80"
+  frontend:
+    environment:
+      KEYCLOAK_URL: http://localhost:18090
+      GATEWAY_PORT: "18080"
+    ports: !override
+      - "13000:3000"

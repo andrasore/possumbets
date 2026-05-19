@@ -12,6 +12,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={notoSans.variable}>
+      <head>
+        {/* Runtime config is served by app/runtime-config.js/route.ts, which
+            reads process.env at request time. Blocking <script> guarantees
+            window.__APP_CONFIG__ is set before any client bundle runs. */}
+        <script src="/runtime-config.js" />
+      </head>
       <body style={{ fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
         <Providers>{children}</Providers>
       </body>

@@ -37,6 +37,7 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
         return (
           <Card.Root
             key={e.eventId}
+            data-testid={`event-card-${e.eventId}`}
             cursor="pointer"
             onClick={() => onToggle(e)}
             borderColor={selected ? 'blue.500' : undefined}

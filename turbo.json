@@ -34,6 +34,10 @@
         "tsconfig.json"
       ],
       "outputs": []
+    },
+    "e2e": {
+      "cache": false,
+      "persistent": false
     }
   }
 }

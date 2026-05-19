@@ -23,6 +23,16 @@ The REST and WebSocket URLs are resolved at runtime in the browser from
 are not configurable via env vars — nginx routes `/` to core and `/socket.io/`
 to the notifications service.
 
+Keycloak's URL (a separate origin the browser is redirected to for OAuth) is
+*also* resolved at runtime — via the `/runtime-config.js` route handler
+(`src/app/runtime-config.js/route.ts`), which reads `process.env.KEYCLOAK_URL`
+on every request and returns a tiny JS payload that sets `window.__APP_CONFIG__`.
+The root layout includes it as a blocking `<script src="/runtime-config.js">`
+in `<head>`, so by the time any client bundle runs, the config is set.
+`src/lib/keycloak.ts` reads from `window.__APP_CONFIG__` via `getConfig()` —
+never `process.env.NEXT_PUBLIC_*`. This lets one image serve dev (port 8090)
+and e2e (port 18090) without rebuilding.
+
 Copy `.env.example` to `.env.local` for Keycloak settings only.
 
 ## Architecture

@@ -62,7 +62,7 @@ export default function DashboardPage() {
               <Heading as="h2" size="md" mb={3}>My Bets</Heading>
               <Stack gap={2}>
                 {bets.map((bet) => (
-                  <Card.Root key={bet.id}>
+                  <Card.Root key={bet.id} data-testid={`bet-row-${bet.id}`}>
                     <Card.Body py={3}>
                       <Flex align="center" justify="space-between" gap={4}>
                         <Text fontSize="sm" fontWeight="medium" textTransform="capitalize">

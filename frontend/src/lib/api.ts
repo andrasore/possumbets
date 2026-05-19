@@ -1,8 +1,9 @@
 import type { Bet, OddsEvent, PlaceBetPayload } from '@/types';
 import { logout, refreshAccessToken } from '@/lib/keycloak';
+import { getConfig } from '@/lib/config';
 
 function baseUrl(): string {
-  return `${window.location.protocol}//${window.location.hostname}:8080`;
+  return `${window.location.protocol}//${window.location.hostname}:${getConfig().gatewayPort}`;
 }
 
 function send(path: string, init: RequestInit | undefined, token: string): Promise<Response> {

@@ -128,7 +128,7 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
               width="full"
             >
               <NumberInput.Control />
-              <NumberInput.Input placeholder="0.00" />
+              <NumberInput.Input placeholder="0.00" data-testid="stake-input" />
             </NumberInput.Root>
           </Field.Root>
           <Separator />
@@ -144,7 +144,13 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
         </Stack>
       </Card.Body>
       <Card.Footer>
-        <Button w="full" onClick={submit} loading={loading} disabled={!stake}>
+        <Button
+          w="full"
+          onClick={submit}
+          loading={loading}
+          disabled={!stake}
+          data-testid="place-bet-button"
+        >
           Place Bet
         </Button>
       </Card.Footer>

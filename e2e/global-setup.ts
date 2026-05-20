@@ -1,4 +1,4 @@
-import { compose } from './compose';
+import { captureLogs, compose } from './compose';
 
 const KEYCLOAK_DISCOVERY =
   'http://localhost:18090/realms/betting/.well-known/openid-configuration';
@@ -24,12 +24,22 @@ async function waitFor(url: string, label: string, timeoutMs = 90_000): Promise<
 }
 
 export default async function globalSetup(): Promise<void> {
-  console.log('→ Booting e2e stack');
-  compose(['up', '-d', '--build', '--wait']);
+  try {
+    console.log('→ Booting e2e stack');
+    compose(['up', '-d', '--build', '--wait']);
 
-  console.log('→ Waiting for Keycloak realm import');
-  await waitFor(KEYCLOAK_DISCOVERY, 'keycloak');
+    console.log('→ Waiting for Keycloak realm import');
+    await waitFor(KEYCLOAK_DISCOVERY, 'keycloak');
 
-  console.log('→ Waiting for frontend');
-  await waitFor(FRONTEND_URL, 'frontend');
+    console.log('→ Waiting for frontend');
+    await waitFor(FRONTEND_URL, 'frontend');
+  } catch (err) {
+    console.error('→ Setup failed — capturing docker logs');
+    try {
+      captureLogs();
+    } catch (logErr) {
+      console.error('  failed to capture logs:', logErr);
+    }
+    throw err;
+  }
 }

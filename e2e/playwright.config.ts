@@ -12,6 +12,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:13000',
     browserName: 'chromium',
+    channel: 'chromium',
     trace: 'on-first-retry',
+    launchOptions: {
+      executablePath: '/usr/bin/chromium',
+    },
   },
 });

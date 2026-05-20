@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "init": "playwright install chromium",
+    "install-browser": "playwright install chromium",
     "e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },

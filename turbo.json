@@ -36,9 +36,7 @@
       "outputs": []
     },
     "e2e": {
-      "dependsOn": ["init"],
-      "cache": false,
-      "persistent": false
+      "dependsOn": ["install-browser"]
     }
   }
 }
